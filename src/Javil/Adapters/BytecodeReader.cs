@@ -177,7 +177,7 @@ public static class BytecodeReader
                 md.Parameters.Add (new ParameterDefinition (md, method_params[i].Name, TypeReference.CreateFromSignature (signature.Parameters[i], declaringType.Container), i, method.GetParameterNullability (i)));
         } else
             for (var i = 0; i < method.GetParameters ().Length; i++)
-                md.Parameters.Add (new ParameterDefinition (md, method.GetParameters ()[i].Name, TypeReference.CreateFromSignature (method.GetParameters ()[i].Type.TypeSignature, declaringType.Container), i, method.GetParameterNullability (i)));
+                md.Parameters.Add (new ParameterDefinition (md, method.GetParameters ()[i].Name, TypeReference.CreateFromSignature (method.GetParameters ()[i].Type.TypeSignature!, declaringType.Container), i, method.GetParameterNullability (i)));
 
         // Checked exceptions
         foreach (var t in method.GetThrows ())
@@ -312,13 +312,17 @@ public static class BytecodeReader
         var a = new Attributes.AnnotationItem (ann.Type);
 
         foreach (var value in ann.Values)
-            a.Values.Add (CreateAnnotationElement (value));
+            if (CreateAnnotationElement (value) is KeyValuePair<string, Attributes.AnnotationElementValue> v)
+                a.Values.Add (v);
 
         return a;
     }
 
-    private static KeyValuePair<string, Attributes.AnnotationElementValue> CreateAnnotationElement (KeyValuePair<string, AnnotationElementValue> pair)
+    private static KeyValuePair<string, Attributes.AnnotationElementValue>? CreateAnnotationElement (KeyValuePair<string, AnnotationElementValue?> pair)
     {
+        if (pair.Value is null)
+            return null;
+
         return new KeyValuePair<string, Attributes.AnnotationElementValue> (pair.Key, CreateAnnotationElementValue (pair.Value));
     }
 

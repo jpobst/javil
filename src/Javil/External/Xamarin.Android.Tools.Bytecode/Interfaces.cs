@@ -1,12 +1,13 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 
-namespace Xamarin.Android.Tools.Bytecode
-{
+namespace Xamarin.Android.Tools.Bytecode {
 
-    // http://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.1
-    public sealed class Interfaces : Collection<ConstantPoolClassItem> {
+	// http://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.1
+	public sealed class Interfaces : Collection<ConstantPoolClassItem> {
 
 		public  ConstantPool    ConstantPool        {get; private set;}
 

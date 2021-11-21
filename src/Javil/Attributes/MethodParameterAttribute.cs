@@ -11,10 +11,10 @@ public class MethodParameterAttribute : BytecodeAttribute
 
 public sealed class MethodParameterInfo
 {
-    public string Name { get; set; }
+    public string? Name { get; set; }
     public MethodParameterAccessFlags AccessFlags { get; set; }
 
-    public MethodParameterInfo (string name, MethodParameterAccessFlags accessFlags)
+    public MethodParameterInfo (string? name, MethodParameterAccessFlags accessFlags)
     {
         Name = name;
         AccessFlags = accessFlags;

@@ -7,9 +7,9 @@ using System.Text;
 namespace Xamarin.Android.Tools.Bytecode {
 
 	// http://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.3.4
-	public static class Signature {
+	static class Signature {
 
-		public static string ExtractType (string signature, ref int index)
+		internal static string ExtractType (string signature, ref int index)
 		{
 			AssertSignatureIndex (signature, index);
 			var i = index++;
@@ -94,9 +94,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 			index++;
 			string t;
 			while ((t = ExtractIdentifier (signature, ref index)) != null) {
-				var bounds = new TypeParameterInfo {
-					Identifier  = t,
-				};
+				var bounds = new TypeParameterInfo (t);
 				typeParameters.Add (bounds);
 
 				AssertSignatureIndex (signature, index);
@@ -131,10 +129,10 @@ namespace Xamarin.Android.Tools.Bytecode {
 	public sealed class TypeParameterInfo {
 
 		public  string          Identifier;
-		public  string          ClassBound;
+		public  string?         ClassBound;
 		public  List<string>    InterfaceBounds = new List<string> ();
 
-		public TypeParameterInfo (string identifier = null, string classBound = null, string[] interfaceBounds = null)
+		public TypeParameterInfo (string identifier, string? classBound = null, string[]? interfaceBounds = null)
 		{
 			Identifier  = identifier;
 			ClassBound  = classBound;

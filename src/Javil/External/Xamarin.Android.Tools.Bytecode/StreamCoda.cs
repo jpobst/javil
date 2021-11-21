@@ -1,10 +1,10 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 
-namespace Xamarin.Android.Tools
-{
+namespace Xamarin.Android.Tools {
 
-    static class StreamCoda {
+	static class StreamCoda {
 
 		internal static byte ReadNetworkByte (this Stream stream)
 		{

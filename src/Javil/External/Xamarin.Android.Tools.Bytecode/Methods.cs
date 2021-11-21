@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -32,7 +33,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 		public  ClassFile           DeclaringType   {get; private set;}
 		public  MethodAccessFlags   AccessFlags     {get; set;}
 		public  AttributeCollection Attributes      {get; private set;}
-		public  string              KotlinReturnType {get; set;}
+		public  string?             KotlinReturnType {get; set;}
 
 		public MethodInfo (ConstantPool constantPool, ClassFile declaringType, Stream stream)
 		{
@@ -67,9 +68,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 				int endParams;
 				GetParametersFromDescriptor (out endParams);
 				endParams++;
-				var r = new TypeInfo {
-					BinaryName = Descriptor.Substring (endParams),
-				};
+				var r = new TypeInfo (Descriptor.Substring (endParams));
 				r.TypeSignature = r.BinaryName;
 				var s = GetSignature ();
 				if (s != null)
@@ -80,7 +79,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 
 		bool    IsEnumCtor  => IsConstructor && DeclaringType.IsEnum;
 
-		ParameterInfo[] parameters = null;
+		ParameterInfo[]? parameters = null;
 
 		public ParameterInfo[] GetParameters ()
 		{
@@ -93,6 +92,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 			UpdateParametersFromMethodParametersAttribute (parameters);
 			return parameters;
 		}
+
 		static IEnumerable<string> ExtractTypesFromSignature (string signature)
 		{
 			if (signature == null || signature.Length < "()V".Length)
@@ -106,6 +106,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 				yield return Signature.ExtractType (signature, ref index);
 			}
 		}
+
 		List<ParameterInfo> GetParametersFromDescriptor (out int endParams)
 		{
 			var signature   = Descriptor;
@@ -146,12 +147,8 @@ namespace Xamarin.Android.Tools.Bytecode {
 					continue;
 				}
 
-				var p       = new ParameterInfo {
-					Position    = c,
-					Name        = "p" + (c++),
-				};
-				p.Type.BinaryName       = type;
-				p.Type.TypeSignature    = type;
+				var p       = new ParameterInfo ("p" + c, type, type, c);
+				c++;
 				ps.Add (p);
 			}
 			endParams = index;
@@ -165,52 +162,27 @@ namespace Xamarin.Android.Tools.Bytecode {
 				return;
 
 			var names = locals.LocalVariables.Where (p => p.StartPC == 0).ToList ();
-			int namesStart  = 0;
-			if (!AccessFlags.HasFlag (MethodAccessFlags.Static) &&
-					names.Count > namesStart &&
-					names [namesStart].Descriptor == DeclaringType.FullJniName) {
-				namesStart++;   // skip `this` parameter
-			}
-			if (!DeclaringType.IsStatic &&
-					IsConstructor &&
-					names.Count > namesStart &&
-					DeclaringType.InnerClass != null && DeclaringType.InnerClass.OuterClassName != null &&
-					names [namesStart].Descriptor == "L" + DeclaringType.InnerClass.OuterClassName + ";") {
-				namesStart++;   // "outer `this`", for non-static inner classes
-			}
-			if (!DeclaringType.IsStatic &&
-					IsConstructor &&
-					names.Count > namesStart &&
-					DeclaringType.TryGetEnclosingMethodInfo (out var declaringClass, out var _, out var _) &&
-					names [namesStart].Descriptor == "L" + declaringClass + ";") {
-				namesStart++;   // "outer `this`", for non-static inner classes
-			}
-
-			// For JvmOverloadsConstructor.<init>.(LJvmOverloadsConstructor;IILjava/lang/String;)V
-			if (namesStart > 0 &&
-					names.Count > namesStart &&
-					parameters.Length > 0 &&
-					names [namesStart].Descriptor   != parameters [0].Type.BinaryName &&
-					names [namesStart-1].Descriptor == parameters [0].Type.BinaryName) {
-				namesStart--;
-			}
 
 			int parametersCount = GetDeclaredParametersCount (parameters);
-			CheckDescriptorVariablesToLocalVariables (parameters, parametersCount, names, namesStart);
 
-			int max = Math.Min (parametersCount,    names.Count - namesStart);
-			for (int i = 0; i < max; ++i) {
-				parameters [i].Name = names [namesStart+i].Name;
-				CheckLocalVariableTypeToDescriptorType (i, parameters, names, namesStart);
+			for (int pi = parametersCount-1; pi >= 0; --pi) {
+				for (int ni = names.Count-1; ni >= 0; --ni) {
+					if (parameters [pi].Type.BinaryName != names [ni].Descriptor) {
+						continue;
+					}
+					parameters [pi].Name = names [ni].Name;
+					names.RemoveAt (ni);
+					break;
+				}
 			}
 		}
 
-		LocalVariableTableAttribute GetLocalVariables ()
+		LocalVariableTableAttribute? GetLocalVariables ()
 		{
 			var code    = Attributes.Get<CodeAttribute> ();
 			if (code == null)
 				return null;
-			var locals = (LocalVariableTableAttribute) code.Attributes.FirstOrDefault (a => a.Name == "LocalVariableTable");
+			var locals = (LocalVariableTableAttribute?) code.Attributes.FirstOrDefault (a => a.Name == "LocalVariableTable");
 			return locals;
 		}
 
@@ -232,6 +204,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 			if (parametersEnd == 0 ||
 					!IsConstructor ||
 					!DeclaringType.TryGetEnclosingMethodInfo (out var declaringClass, out var declaringMethodName, out var declaringMethodDescriptor) ||
+					declaringMethodDescriptor == null ||
 					string.IsNullOrEmpty (declaringMethodDescriptor))
 				return parametersEnd;
 
@@ -273,60 +246,6 @@ namespace Xamarin.Android.Tools.Bytecode {
 			}
 		}
 
-		void CheckDescriptorVariablesToLocalVariables (ParameterInfo[] parameters, int parametersCount, List<LocalVariableTableEntry> names, int namesStart)
-		{
-			if (AccessFlags.HasFlag (MethodAccessFlags.Synthetic))
-				return;
-			if ((names.Count - namesStart) == parametersCount)
-				return;
-			if (IsEnumCtor)
-				return;
-
-			var paramsDesc  = CreateParametersList (parameters, (v, i) => $"`{v.Type.BinaryName}` {v.Name}{(i >= parametersCount ? " /* abi; ignored */" : "")}");
-			var localsDesc  = CreateParametersList (names,      (v, i) => $"`{v.Descriptor}` {v.Name}{(i < namesStart ? " /* abi; skipped */" : "")}");
-
-			Log.Debug ($"class-parse: method {DeclaringType.ThisClass.Name.Value}.{Name}.{Descriptor}: namesStart={namesStart}; " +
-					$"Local variables array has {names.Count - namesStart} entries {localsDesc}; " +
-					$"descriptor has {parametersCount} entries {paramsDesc}!");
-		}
-
-		static string CreateParametersList<T>(IEnumerable<T> values, Func<T, int, string> createElement)
-		{
-			var description = new StringBuilder ()
-				.Append ("(");
-
-			int index   = 0;
-			var first   = true;
-			foreach (var v in values) {
-				if (!first) {
-					description.Append (", ");
-				}
-				first   = false;
-				description.Append (createElement (v, index));
-				index++;
-			}
-			description.Append (")");
-
-			return description.ToString ();
-		}
-
-		void CheckLocalVariableTypeToDescriptorType (int index, ParameterInfo[] parameters, List<LocalVariableTableEntry> names, int namesStart)
-		{
-			if (AccessFlags.HasFlag (MethodAccessFlags.Synthetic))
-				return;
-
-			var parameterType   = parameters [index].Type.BinaryName;
-			var descriptorType  = names [index + namesStart].Descriptor;
-			if (parameterType == descriptorType)
-				return;
-
-			var paramsDesc  = CreateParametersList (parameters, (v, i) => $"`{v.Type.BinaryName}` {v.Name}");
-			var localsDesc  = CreateParametersList (names,      (v, i) => $"`{v.Descriptor}` {v.Name}{(i < namesStart ? " /* abi; skipped */" : "")}");
-
-			Log.Debug ($"class-parse: method {DeclaringType.ThisClass.Name.Value}.{Name}.{Descriptor}: " +
-					$"Local variables array {localsDesc} element {index+namesStart} with type `{descriptorType}` doesn't match expected descriptor list {paramsDesc} element {index} with type `{parameterType}`.");
-		}
-
 		void CheckDescriptorVariablesToSignatureParameters (ParameterInfo[] parameters, int parametersCount, MethodTypeSignature sig)
 		{
 			if (IsEnumCtor)
@@ -361,9 +280,9 @@ namespace Xamarin.Android.Tools.Bytecode {
 			return throws;
 		}
 
-		public MethodTypeSignature GetSignature ()
+		public MethodTypeSignature? GetSignature ()
 		{
-			var signature = (SignatureAttribute) Attributes.SingleOrDefault (a => a.Name == "Signature");
+			var signature = (SignatureAttribute?) Attributes.SingleOrDefault (a => a.Name == "Signature");
 			return signature != null
 				? new MethodTypeSignature (signature.Value)
 				: null;
@@ -371,7 +290,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 
 		void UpdateParametersFromMethodParametersAttribute (ParameterInfo[] parameters)
 		{
-			var methodParams = (MethodParametersAttribute) Attributes.SingleOrDefault (a => a.Name == AttributeInfo.MethodParameters);
+			var methodParams = (MethodParametersAttribute?) Attributes.SingleOrDefault (a => a.Name == AttributeInfo.MethodParameters);
 			if (methodParams == null)
 				return;
 
@@ -391,7 +310,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 				var p = pinfo [i + startIndex];
 
 				parameters [i].AccessFlags = p.AccessFlags;
-				if (p != null) {
+				if (p.Name != null) {
 					parameters [i].Name = p.Name;
 				}
 			}
@@ -408,9 +327,9 @@ namespace Xamarin.Android.Tools.Bytecode {
 
 		// FieldTypeSignature, as extracted from the Signature attribute, which contains
 		// generic type information.
-		public  string  TypeSignature;
+		public  string? TypeSignature;
 
-		public TypeInfo (string binaryName = null, string typeSignature = null)
+		public TypeInfo (string binaryName, string? typeSignature = null)
 		{
 			BinaryName      = binaryName;
 			TypeSignature   = typeSignature;
@@ -421,7 +340,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 			return (BinaryName ?? "").GetHashCode () ^ (TypeSignature ?? "").GetHashCode ();
 		}
 
-		public override bool Equals (object obj)
+		public override bool Equals (object? obj)
 		{
 			var o = obj as TypeInfo;
 			if (o == null)
@@ -429,7 +348,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 			return Equals (o);
 		}
 
-		public bool Equals (TypeInfo other)
+		public bool Equals (TypeInfo? other)
 		{
 			if (other == null)
 				return false;
@@ -451,26 +370,25 @@ namespace Xamarin.Android.Tools.Bytecode {
 
 		public  string      Name;
 		public  int         Position;
-		public  TypeInfo    Type    = new TypeInfo ();
-		public  string      KotlinType;
+		public  TypeInfo    Type;
+		public  string?     KotlinType;
 
 		public  MethodParameterAccessFlags      AccessFlags;
 
-		public ParameterInfo (string name = null, string binaryName = null, string typeSignature = null, int position = 0)
+		public ParameterInfo (string name, string binaryName, string? typeSignature = null, int position = 0)
 		{
 			Name                = name;
-			Type.BinaryName     = binaryName;
-			Type.TypeSignature  = typeSignature;
 			Position            = position;
+			Type                = new TypeInfo (binaryName, typeSignature);
 		}
 
 		public override int GetHashCode ()
 		{
 			return (Name ?? "").GetHashCode () ^ Position.GetHashCode () ^
-				(Type ?? new TypeInfo ()).GetHashCode ();
+				(Type ?? new TypeInfo ("")).GetHashCode ();
 		}
 
-		public override bool Equals (object obj)
+		public override bool Equals (object? obj)
 		{
 			var o = obj as ParameterInfo;
 			if (o == null)
@@ -478,7 +396,7 @@ namespace Xamarin.Android.Tools.Bytecode {
 			return Equals (o);
 		}
 
-		public bool Equals (ParameterInfo other)
+		public bool Equals (ParameterInfo? other)
 		{
 			if (other == null)
 				return false;

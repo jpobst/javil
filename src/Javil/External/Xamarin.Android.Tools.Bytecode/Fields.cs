@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 
-namespace Xamarin.Android.Tools.Bytecode
-{
+namespace Xamarin.Android.Tools.Bytecode {
 
-    public sealed class Fields : Collection<FieldInfo> {
+	public sealed class Fields : Collection<FieldInfo> {
 
 		public  ConstantPool    ConstantPool        {get; private set;}
 
@@ -32,7 +33,7 @@ namespace Xamarin.Android.Tools.Bytecode
 		public  ConstantPool        ConstantPool    {get; private set;}
 		public  FieldAccessFlags    AccessFlags     {get; private set;}
 		public  AttributeCollection Attributes      {get; private set;}
-		public  string              KotlinType      { get; set; }
+		public  string?             KotlinType      {get; set;}
 
 		public FieldInfo (ConstantPool constantPool, Stream stream)
 		{
@@ -55,7 +56,7 @@ namespace Xamarin.Android.Tools.Bytecode
 			}
 		}
 
-		public string GetSignature ()
+		public string? GetSignature ()
 		{
 			var signature   = Attributes.Get<SignatureAttribute> ();
 			return signature != null ? signature.Value : null;

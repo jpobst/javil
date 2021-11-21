@@ -11,10 +11,10 @@ public class InnerClassesAttribute : BytecodeAttribute
 
 public sealed class InnerClassInfo
 {
-    public string InnerName { get; set; }
-    public string OuterClassName { get; set; }
+    public string? InnerName { get; set; }
+    public string? OuterClassName { get; set; }
 
-    public InnerClassInfo (string innerName, string outerClassName)
+    public InnerClassInfo (string? innerName, string? outerClassName)
     {
         InnerName = innerName;
         OuterClassName = outerClassName;

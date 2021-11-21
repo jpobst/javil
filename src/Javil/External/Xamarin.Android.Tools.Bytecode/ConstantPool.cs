@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 
-namespace Xamarin.Android.Tools.Bytecode
-{
+namespace Xamarin.Android.Tools.Bytecode {
 
-    // http://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.4
-    public class ConstantPool : Collection<ConstantPoolItem> {
+	// http://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.4
+	public class ConstantPool : Collection<ConstantPoolItem> {
 
 		public ConstantPool (Stream stream)
 		{
@@ -18,7 +18,7 @@ namespace Xamarin.Android.Tools.Bytecode
 
 			// indexes are one-based;
 			// "The constant_pool table is indexed from 1 to constant_pool_count-1."
-			Add (null);
+			Add (null!);
 			int constant_pool_count = stream.ReadNetworkUInt16 ();
 			for (int i = 1; i < constant_pool_count; ++i) {
 				var entry   = ConstantPoolItem.CreateFromStream (this, stream);
@@ -446,7 +446,7 @@ namespace Xamarin.Android.Tools.Bytecode
 	// http://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.4.9
 	public sealed class ConstantPoolMethodTypeItem : ConstantPoolItem {
 
-		public ushort  descriptorIndex;
+		ushort  descriptorIndex;
 
 		public ConstantPoolMethodTypeItem (ConstantPool constantPool, Stream stream)
 			: base (constantPool, stream)
@@ -473,7 +473,7 @@ namespace Xamarin.Android.Tools.Bytecode
 	public sealed class ConstantPoolDynamicItem : ConstantPoolItem
 	{
 		public ushort boostrapMethodAttrIndex;
-		public ushort nameAndTypeIndex;
+		ushort nameAndTypeIndex;
 
 		public ConstantPoolDynamicItem (ConstantPool constantPool, Stream stream)
 			: base (constantPool, stream)
@@ -485,7 +485,6 @@ namespace Xamarin.Android.Tools.Bytecode
 		public override ConstantPoolItemType Type {
 			get { return ConstantPoolItemType.Dynamic; }
 		}
-
         public ConstantPoolNameAndTypeItem NameAndType {
             get { return (ConstantPoolNameAndTypeItem)ConstantPool[nameAndTypeIndex]; }
         }
@@ -507,7 +506,6 @@ namespace Xamarin.Android.Tools.Bytecode
 		public override ConstantPoolItemType Type {
 			get {return ConstantPoolItemType.InvokeDynamic;}
 		}
-
         public ConstantPoolNameAndTypeItem NameAndType {
             get { return (ConstantPoolNameAndTypeItem)ConstantPool[nameAndTypeIndex]; }
         }
