@@ -1,6 +1,6 @@
 ﻿namespace Javil;
 
-public interface IMemberDefinition
+public interface IMemberDefinition : ICustomDataProvider
 {
     string Name { get; }
     string FullName { get; }

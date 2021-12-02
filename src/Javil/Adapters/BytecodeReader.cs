@@ -398,7 +398,7 @@ public static class BytecodeReader
                 return ((ConstantPoolLongItem)constant).Value;
             case ConstantPoolItemType.Integer:
                 if (field.Descriptor == "Z")
-                    return ((ConstantPoolIntegerItem)constant).Value == 1 ? true : false;
+                    return ((ConstantPoolIntegerItem)constant).Value == 1;
                 else if (field.Descriptor == "C")
                     return (char)((ConstantPoolIntegerItem)constant).Value;
                 else

@@ -6,7 +6,7 @@ public class TypeReference : MemberReference, IGenericParameterProvider
 {
     private Collection<GenericParameter>? generic_parameters;
 
-    public virtual string Namespace { get; set; }
+    public virtual string Namespace { get; }
     public virtual string JniName => base.Name;
     public virtual string WildcardIndicator { get; set; } = string.Empty;
     protected virtual string GetGenericJniName => JniName;
