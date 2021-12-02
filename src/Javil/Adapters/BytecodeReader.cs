@@ -24,12 +24,12 @@ public static class BytecodeReader
         var type_name = classFile.ThisClass.Name.Value.LastSubset ('/');
 
         if (!type_name.Contains ('$')) {
-            container.Types.Add (CreateType (classFile.PackageName, type_name, null, classFile, container));
+            container.AddType (CreateType (classFile.PackageName, type_name, null, classFile, container));
             return;
         }
 
         var top_declaring = type_name.FirstSubset ('$');
-        var top_declaring_type = container.Types.FirstOrDefault (t => t.FullName == classFile.PackageName + "." + top_declaring);
+        var top_declaring_type = container.FindType (classFile.PackageName + "." + top_declaring);
 
         if (top_declaring_type is null)
             throw new InvalidOperationException ($"Could not find declaring type for '{classFile.ThisClass.Name.Value}'.");

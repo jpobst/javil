@@ -8,7 +8,7 @@ public class BaseContainerResolver : IContainerResolver
 
     public BaseContainerResolver ()
     {
-        primitive_container = new ContainerDefinition ("dummy.jar", this);
+        primitive_container = new ContainerDefinition ("built-in-types.jar", this);
 
         primitive_types = new[] {
                 new TypeDefinition ("byte", primitive_container),
@@ -55,11 +55,6 @@ public class BaseContainerResolver : IContainerResolver
     {
         var full_name = member is TypeSpecification ts ? ts.ElementType.FullNameGenericsErased : member.FullNameGenericsErased;
 
-        if (member.DeclaringType == null)
-            return container.Types.FirstOrDefault (t => t.FullNameGenericsErased == full_name);
-
-        var declaring = Resolve (member.DeclaringType);
-
-        return declaring?.NestedTypes.FirstOrDefault (t => t.FullName == full_name);
+        return container.FindType (full_name);
     }
 }
