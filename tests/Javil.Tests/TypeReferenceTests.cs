@@ -244,5 +244,5 @@ public class TypeReferenceTests
         Assert.AreEqual (s, type.JniFullName);
     }
 
-    private ContainerDefinition DummyContainer { get; } = new ContainerDefinition ("dummy.jar", new BaseContainerResolver ());
+    private ContainerDefinition DummyContainer { get; } = new ContainerDefinition ("dummy.jar");
 }

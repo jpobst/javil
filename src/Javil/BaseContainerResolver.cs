@@ -8,7 +8,11 @@ public class BaseContainerResolver : IContainerResolver
 
     public BaseContainerResolver ()
     {
-        primitive_container = new ContainerDefinition ("built-in-types.jar", this);
+        var settings = new JavilSettings {
+            Resolver = this
+        };
+
+        primitive_container = new ContainerDefinition ("built-in-types.jar", settings);
 
         primitive_types = new[] {
                 new TypeDefinition ("byte", primitive_container),
@@ -30,7 +34,11 @@ public class BaseContainerResolver : IContainerResolver
 
     public void AddContainer (string filename)
     {
-        containers.Add (new ContainerDefinition (filename, this));
+        var settings = new JavilSettings {
+            Resolver = this
+        };
+
+        containers.Add (new ContainerDefinition (filename, settings));
     }
 
     public TypeDefinition Resolve (MemberReference member)
