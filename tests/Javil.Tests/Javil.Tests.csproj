@@ -1,10 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <JavaTestFiles Include="java\**\*.java" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
@@ -16,5 +20,36 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Javil\Javil.csproj" />
   </ItemGroup>
+
+  <!-- Compiles the Java test source files in /java. -->
+  <Target Name="BuildClasses" BeforeTargets="Build" Inputs="@(JavaTestFiles)" Outputs="$(OutputPath)java_test_jars/test.jar">
+
+    <!-- Ensure Java is available -->
+    <PropertyGroup>
+      <JavacExecutable>javac</JavacExecutable>
+      <JarExecutable>jar</JarExecutable>
+      <JavacExecutable Condition=" '$(OS)' == 'Windows_NT' ">javac.exe</JavacExecutable>
+      <JarExecutable Condition=" '$(OS)' == 'Windows_NT' ">jar.exe</JarExecutable>
+    </PropertyGroup>
+
+    <Error Condition="$(JAVA_HOME) == ''" Text="The JAVA_HOME environment variable must be set to a valid JDK installation." />
+
+    <PropertyGroup>
+      <JavacPath>$([MSBuild]::EnsureTrailingSlash('$(JAVA_HOME)'))bin/$(JavacExecutable)</JavacPath>
+      <JarPath>$([MSBuild]::EnsureTrailingSlash('$(JAVA_HOME)'))bin/$(JarExecutable)</JarPath>
+    </PropertyGroup>
+
+    <Error Condition="!Exists($(JavacPath))" Text="Could not find Java compiler '$(JavacPath)'." />
+    <Error Condition="!Exists($(JarPath))" Text="Could not find Jar assembler '$(JarPath)'." />
+
+    <!-- Compile to .class files -->
+    <MakeDir Directories="$(OutputPath)java_test_classes" />
+    <Exec Command="&quot;$(JavacPath)&quot; -parameters -g -d &quot;$(OutputPath)java_test_classes&quot; @(JavaTestFiles->'%(Identity)', ' ')" />
+
+    <!-- Combine into .jar file -->
+    <MakeDir Directories="$(OutputPath)java_test_jars" />
+    <Exec Command="&quot;$(JarPath)&quot; cf &quot;$(OutputPath)java_test_jars/test.jar&quot; -C &quot;$(OutputPath)java_test_classes&quot; ." />
+
+  </Target>
 
 </Project>

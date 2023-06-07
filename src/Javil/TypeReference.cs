@@ -60,6 +60,15 @@ public class TypeReference : MemberReference, IGenericParameterProvider
         }
     }
 
+    public override string GenericName {
+        get {
+            if (HasGenericParameters)
+                return $"{Name}<{string.Join (", ", GenericParameters.Select (gp => gp.Name))}>";
+
+            return Name;
+        }
+    }
+
     public static TypeReference CreateFromFullName (string name, ContainerDefinition container)
         => CreateFromSignature (TypeSignature.ParseFullName (name), container);
 
