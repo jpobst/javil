@@ -57,7 +57,18 @@ public class MethodDefinition : MemberReference, IMemberDefinition, IGenericPara
 
     public MethodDefinition? FindBaseMethodOrDefault ()
     {
-        return FindBaseMethod (DeclaringType?.Resolve ()?.BaseType?.Resolve ());
+        // Static methods cannot be overridden
+        if (IsStatic) 
+            return null;
+
+        if (DeclaringType?.Resolve ()?.BaseType is TypeReference base_type) {
+            var mapping = new GenericParameterMapping ();
+            mapping.AddMappingFromTypeReference (base_type);
+
+            return FindBaseMethod (base_type.Resolve (), mapping);
+        }
+
+        return null;
     }
 
     public virtual IEnumerable<GenericParameter> GetGenericParametersInScope ()
@@ -71,7 +82,7 @@ public class MethodDefinition : MemberReference, IMemberDefinition, IGenericPara
                 yield return gp;
     }
 
-    private MethodDefinition? FindBaseMethod (TypeDefinition? type)
+    private MethodDefinition? FindBaseMethod (TypeDefinition? type, GenericParameterMapping mapping)
     {
         if (type is null)
             return null;
@@ -79,10 +90,15 @@ public class MethodDefinition : MemberReference, IMemberDefinition, IGenericPara
         var candidates = type.Methods.OfType<MethodDefinition> ().Where (m => m.Name == Name && m.Parameters.Count == Parameters.Count);
 
         foreach (var candidate in candidates)
-            if (AreMethodsCompatible (this, candidate))
+            if (AreMethodsCompatible (this, candidate, mapping))
                 return candidate;
 
-        return FindBaseMethod (type.BaseType?.Resolve ());
+        if (type.BaseType is TypeReference base_type) {
+            mapping.AddMappingFromTypeReference (base_type);
+            return FindBaseMethod (base_type.Resolve (), mapping);
+        }
+
+        return null;
     }
 
     protected override IMemberDefinition? ResolveDefinition ()
@@ -106,11 +122,27 @@ public class MethodDefinition : MemberReference, IMemberDefinition, IGenericPara
         }
     }
 
-    private bool AreMethodsCompatible (MethodDefinition method, MethodDefinition candidate)
+    private bool AreMethodsCompatible (MethodDefinition method, MethodDefinition candidate, GenericParameterMapping mapping)
     {
-        for (var i = 0; i < method.Parameters.Count; i++)
-            if (method.Parameters[i].ParameterType.FullName != candidate.Parameters[i].ParameterType.FullName)
-                return false;
+        for (var i = 0; i < method.Parameters.Count; i++) {
+            var p1 = method.Parameters[i].ParameterType.FullName;
+            var p2 = mapping.GetMapping (candidate.Parameters[i].ParameterType);
+
+            if (p1 == p2)
+                continue;
+
+            // TODO: Need a more elegant/correct way of handling the following cases
+            if (p1.Replace ("**", "java.lang.Object, java.lang.Object") == p2)
+                continue;
+
+            if (p1.Replace ("?", "java.lang.Object") == p2)
+                continue;
+
+            if (p1.Replace ("java.lang.Class<?>", "java.lang.Class") == p2.Replace ("java.lang.Class<?>", "java.lang.Class"))
+                continue;
+
+            return false;
+        }
 
         return true;
     }
@@ -135,5 +167,10 @@ public class MethodDefinition : MemberReference, IMemberDefinition, IGenericPara
         sb.Append (ReturnType.GetDescriptor (gps));
 
         return sb.ToString ();
+    }
+
+    public override string ToString ()
+    {
+        return $"{ReturnType.Name} {FullName} ({string.Join (", ", Parameters.Select (p => $"{p.ParameterType.Name} {p.Name}"))})";
     }
 }
