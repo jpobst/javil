@@ -5,9 +5,9 @@ namespace Javil.Adapters;
 
 public static class BytecodeReader
 {
-    public static ContainerDefinition Read (string fileName, ReaderParameters? parameters = null)
+    public static ContainerDefinition Read (string fileName, JavilSettings? settings = null)
     {
-        var container = new ContainerDefinition (fileName, parameters?.Resolver ?? new BaseContainerResolver ());
+        var container = new ContainerDefinition (fileName, settings);
 
         var cp = new ClassPath (fileName);
         var flattened_types = new Collection<TypeDefinition> ();

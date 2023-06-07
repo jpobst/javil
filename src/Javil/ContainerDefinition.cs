@@ -10,16 +10,17 @@ public sealed class ContainerDefinition
     public string FileName { get; }
     public IReadOnlyCollection<TypeDefinition> Types => types.Values;
 
-    public IContainerResolver Resolver { get; }
+    public IContainerResolver Resolver => Settings.Resolver;
+    public JavilSettings Settings { get; }
 
-    public ContainerDefinition (string fileName, IContainerResolver resolver)
+    public ContainerDefinition (string fileName, JavilSettings? settings = null)
     {
         FileName = fileName;
-        Resolver = resolver;
+        Settings = settings ?? new JavilSettings ();
     }
 
-    public static ContainerDefinition ReadContainer (string fileName, ReaderParameters? parameters = null)
-        => BytecodeReader.Read (fileName, parameters);
+    public static ContainerDefinition ReadContainer (string fileName, JavilSettings? settings = null)
+        => BytecodeReader.Read (fileName, settings);
 
     public TypeDefinition Resolve (TypeReference type)
     {
