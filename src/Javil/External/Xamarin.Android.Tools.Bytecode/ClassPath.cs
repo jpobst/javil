@@ -72,8 +72,9 @@ namespace Xamarin.Android.Tools.Bytecode {
 						if (!ClassFile.IsClassFile (s) || entry.Name.EndsWith (".jnilib", StringComparison.OrdinalIgnoreCase))
 							continue;
 					}
-					using (var s = entry.Open ()) {
-						try {
+                    using (var entry_stream = entry.Open ())
+                    using (var s = new BufferedStream (entry_stream)) {
+                        try {
 							var c   = new ClassFile (s);
 							Add (c);
 						} catch (Exception e) {
