@@ -39,7 +39,7 @@ public static class BytecodeReader
 
     private static void AddNestedType (TypeDefinition declaring, ClassFile classFile, ContainerDefinition container)
     {
-        var remaining_name = classFile.ThisClass.Name.Value.Substring (declaring.FullName.Length + 1);
+        var remaining_name = classFile.ThisClass.Name.Value.Substring (declaring.FullNameGenericsErased.Length + 1);
 
         if (!remaining_name.Contains ('$')) {
             declaring.NestedTypes.Add (CreateType (classFile.PackageName, remaining_name, declaring, classFile, container));
