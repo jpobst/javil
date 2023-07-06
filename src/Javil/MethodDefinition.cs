@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Javil.Extensions;
 
 namespace Javil;
 
@@ -38,6 +39,32 @@ public class MethodDefinition : MemberReference, IMemberDefinition, IGenericPara
         ReturnType = returnType;
     }
 
+    /// <summary>
+    /// Finds the immediate base method this method overrides, if any.
+    /// Example: Given 'Dog.Eat ()' -> 'Mammal.Eat ()' -> 'Animal.Eat ()'.
+    ///          Calling this for 'Dog.Eat ()' would return 'Mammal.Eat ()'.
+    /// </summary>
+    public MethodDefinition? FindBaseMethodOrDefault ()
+    {
+        // Static methods cannot be overridden
+        if (IsStatic) 
+            return null;
+
+        if (DeclaringType?.Resolve ()?.BaseType is TypeReference base_type) {
+            var mapping = new GenericParameterMapping ();
+            mapping.AddMappingFromTypeReference (base_type);
+
+            return FindBaseMethod (base_type.Resolve (), mapping);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Finds the original 'virtual' method this method overrides, if any.
+    /// Example: Given 'Dog.Eat ()' -> 'Mammal.Eat ()' -> 'Animal.Eat ()'.
+    ///          Calling this for 'Dog.Eat ()' would return 'Animal.Eat ()'.
+    /// </summary>
     public MethodDefinition? FindDeclaredBaseMethodOrDefault ()
     {
         var candidate = FindBaseMethodOrDefault ();
@@ -55,22 +82,6 @@ public class MethodDefinition : MemberReference, IMemberDefinition, IGenericPara
         }
     }
 
-    public MethodDefinition? FindBaseMethodOrDefault ()
-    {
-        // Static methods cannot be overridden
-        if (IsStatic) 
-            return null;
-
-        if (DeclaringType?.Resolve ()?.BaseType is TypeReference base_type) {
-            var mapping = new GenericParameterMapping ();
-            mapping.AddMappingFromTypeReference (base_type);
-
-            return FindBaseMethod (base_type.Resolve (), mapping);
-        }
-
-        return null;
-    }
-
     public virtual IEnumerable<GenericParameter> GetGenericParametersInScope ()
     {
         if (HasGenericParameters)
@@ -80,25 +91,6 @@ public class MethodDefinition : MemberReference, IMemberDefinition, IGenericPara
         if (DeclaringType is not null)
             foreach (var gp in DeclaringType.GetGenericParametersInScope ())
                 yield return gp;
-    }
-
-    private MethodDefinition? FindBaseMethod (TypeDefinition? type, GenericParameterMapping mapping)
-    {
-        if (type is null)
-            return null;
-
-        var candidates = type.Methods.OfType<MethodDefinition> ().Where (m => m.Name == Name && m.Parameters.Count == Parameters.Count);
-
-        foreach (var candidate in candidates)
-            if (AreMethodsCompatible (this, candidate, mapping))
-                return candidate;
-
-        if (type.BaseType is TypeReference base_type) {
-            mapping.AddMappingFromTypeReference (base_type);
-            return FindBaseMethod (base_type.Resolve (), mapping);
-        }
-
-        return null;
     }
 
     protected override IMemberDefinition? ResolveDefinition ()
@@ -122,30 +114,8 @@ public class MethodDefinition : MemberReference, IMemberDefinition, IGenericPara
         }
     }
 
-    private bool AreMethodsCompatible (MethodDefinition method, MethodDefinition candidate, GenericParameterMapping mapping)
-    {
-        for (var i = 0; i < method.Parameters.Count; i++) {
-            var p1 = method.Parameters[i].ParameterType.FullName;
-            var p2 = mapping.GetMapping (candidate.Parameters[i].ParameterType);
-
-            if (p1 == p2)
-                continue;
-
-            // TODO: Need a more elegant/correct way of handling the following cases
-            if (p1.Replace ("**", "java.lang.Object, java.lang.Object") == p2)
-                continue;
-
-            if (p1.Replace ("?", "java.lang.Object") == p2)
-                continue;
-
-            if (p1.Replace ("java.lang.Class<?>", "java.lang.Class") == p2.Replace ("java.lang.Class<?>", "java.lang.Class"))
-                continue;
-
-            return false;
-        }
-
-        return true;
-    }
+    public string GetDescriptorGenericsErased () 
+        => $"({string.Join ("", Parameters.Select (p => p.ParameterType.JniFullNameGenericsErased))}){ReturnType.JniFullNameGenericsErased}";
 
     // (Landroid/content/ComponentName;Ljava/lang/String;Ljava/util/List;)Z
     public string GetDescriptor ()
@@ -172,5 +142,29 @@ public class MethodDefinition : MemberReference, IMemberDefinition, IGenericPara
     public override string ToString ()
     {
         return $"{ReturnType.Name} {FullName} ({string.Join (", ", Parameters.Select (p => $"{p.ParameterType.Name} {p.Name}"))})";
+    }
+
+    private MethodDefinition? FindBaseMethod (TypeDefinition? type, GenericParameterMapping mapping)
+    {
+        if (type is null)
+            return null;
+
+        var candidates = type.Methods.OfType<MethodDefinition> ().Where (m => m.Name == Name && m.Parameters.Count == Parameters.Count);
+
+        foreach (var candidate in candidates)
+            if (TypeExtensions.AreMethodsCompatible (this, candidate, mapping))
+                return candidate;
+
+        if (type.BaseType is TypeReference base_type) {
+            mapping.AddMappingFromTypeReference (base_type);
+            return FindBaseMethod (base_type.Resolve (), mapping);
+        }
+
+        return null;
+    }
+
+    public bool IsMethodCovariantReturn (MethodDefinition candidate, GenericParameterMapping? mapping = null)
+    {
+        return !TypeExtensions.AreParametersCompatible (ReturnType, candidate.ReturnType, mapping);
     }
 }

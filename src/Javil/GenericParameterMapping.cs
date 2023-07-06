@@ -62,7 +62,7 @@ public class GenericParameterMapping
         return typeReference;
     }
 
-    public string GetMapping (TypeReference typeReference)
+    private string GetMapping (TypeReference typeReference)
     {
         if (typeReference is GenericParameter gp) {
             var mapping = GetMapping (gp.Name);
