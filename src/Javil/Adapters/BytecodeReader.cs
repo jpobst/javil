@@ -167,17 +167,10 @@ public static class BytecodeReader
                 AddGenericTypeParameter (md, tp, declaringType.Container);
 
         // Method parameters
-        if (signature?.Parameters.Any () == true) {
-            var method_params = method.GetParameters (); ;
+        var parameters = method.GetParameters ();
 
-            if (signature.Parameters.Count != method_params.Length)
-                throw new InvalidOperationException ();
-
-            for (var i = 0; i < method_params.Length; i++)
-                md.Parameters.Add (new ParameterDefinition (md, method_params[i].Name, TypeReference.CreateFromSignature (signature.Parameters[i], declaringType.Container), i, method.GetParameterNullability (i)));
-        } else
-            for (var i = 0; i < method.GetParameters ().Length; i++)
-                md.Parameters.Add (new ParameterDefinition (md, method.GetParameters ()[i].Name, TypeReference.CreateFromSignature (method.GetParameters ()[i].Type.TypeSignature!, declaringType.Container), i, method.GetParameterNullability (i)));
+        for (var i = 0; i < parameters.Length; i++)
+            md.Parameters.Add (new ParameterDefinition (md, parameters[i].Name, TypeReference.CreateFromSignature (parameters[i].Type.TypeSignature!, declaringType.Container), i, method.GetParameterNullability (i)));
 
         // Checked exceptions
         foreach (var t in method.GetThrows ())
