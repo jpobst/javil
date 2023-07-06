@@ -59,6 +59,11 @@ public class SignatureParserTests
         CheckSignature ("Ljava/util/Collection<+Ljava/security/cert/Certificate;>;");
         CheckSignature ("Ljava/util/function/Function<-TT;+TU;>;");
         CheckSignature ("Ljava/util/stream/Collector<TT;*Ljava/lang/Integer;>;");
+
+        // Sometimes a period is used instead of dollar sign for nested types.
+        // Currently this will not correctly round trip because we don't know when to emit
+        // the period, but it will be parsed.
+        //CheckSignature ("Ljava/lang/invoke/ClassSpecializer<TT;TK;TS;>.SpeciesData;");
     }
 
     private static void CheckSignature (string s)

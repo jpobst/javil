@@ -78,7 +78,7 @@ internal class SignatureParser
                 continue;
             }
 
-            if (AtNestedTypeSeparator) {
+            if (AtNestedTypeSeparator || AtPeriodSeparator) {
                 types.Add (text.Substring (temp_start, curr - temp_start));
                 Advance ();
                 temp_start = curr;
@@ -279,4 +279,6 @@ internal class SignatureParser
     private bool AtNamespaceSeparator => CurrentChar == '/';
 
     private bool AtNestedTypeSeparator => CurrentChar == '$';
+
+    private bool AtPeriodSeparator => CurrentChar == '.';
 }

@@ -65,11 +65,8 @@ public class TypeSignature
 
         if (HasGenericArguments) {
             sb.Append ('<');
-
             sb.Append (string.Concat (GenericArguments.Select (a => a.ToString ())));
-
             sb.Append ('>');
-
         }
 
         if (NestedType is not null) {
