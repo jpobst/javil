@@ -87,9 +87,9 @@ public static class BytecodeReader
         // Implemented interfaces
         for (var i = 0; i < classFile.Interfaces.Count; i++) {
             if (signature?.SuperinterfaceSignatures.Any () == true)
-                td.ImplementedInterfaces.Add (new ImplementedInterface (TypeReference.CreateFromSignature (signature.SuperinterfaceSignatures[i], container)));
+                td.ImplementedInterfaces.Add (new ImplementedInterface (td, TypeReference.CreateFromSignature (signature.SuperinterfaceSignatures[i], container)));
             else
-                td.ImplementedInterfaces.Add (new ImplementedInterface (TypeReference.CreateFromFullName (classFile.Interfaces[i].Name.Value, container)));
+                td.ImplementedInterfaces.Add (new ImplementedInterface (td, TypeReference.CreateFromFullName (classFile.Interfaces[i].Name.Value, container)));
         }
 
         // Fields
