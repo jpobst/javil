@@ -26,6 +26,8 @@ public class TypeDefinition : TypeReference, IMemberDefinition, IAttributeProvid
 
     public bool IsInterface { get; set; }
 
+    public bool IsClass => !IsInterface;
+
     public bool IsStatic { get; set; }
 
     public bool IsEnum { get; set; }

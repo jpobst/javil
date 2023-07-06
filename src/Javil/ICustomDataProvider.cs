@@ -2,5 +2,5 @@
 
 public interface ICustomDataProvider
 {
-    IDictionary<string, string> CustomData { get; }
+    IDictionary<string, object> CustomData { get; }
 }
